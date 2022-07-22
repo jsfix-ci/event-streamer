@@ -1,4 +1,4 @@
-import { from, of } from 'rxjs';
+import { lastValueFrom, from, of } from 'rxjs';
 import { Databag } from '../databag';
 import { toArray, map, concatMap } from 'rxjs/operators';
 import { fail } from 'assert';
@@ -8,12 +8,12 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues);
     it('does not change the amount of data in the observable', async () => {
-      const result = await obs.pipe(Databag.wrap(), toArray()).toPromise();
+      const result = await lastValueFrom(obs.pipe(Databag.wrap(), toArray()));
       expect(result).toHaveLength(testValues.length);
     });
 
     it('wraps around the provided data', async () => {
-      const results = await obs.pipe(Databag.wrap(), toArray()).toPromise();
+      const results = await lastValueFrom(obs.pipe(Databag.wrap(), toArray()));
       results.forEach((result, idx) =>
         expect(result).toHaveProperty('data', testValues[idx])
       );
@@ -24,12 +24,12 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap());
     it('does not change the amount of data in the observable', async () => {
-      const result = await obs.pipe(Databag.unwrap(), toArray()).toPromise();
+      const result = await lastValueFrom(obs.pipe(Databag.unwrap(), toArray()));
       expect(result).toHaveLength(testValues.length);
     });
 
     it('unwraps the wrapped data', async () => {
-      const results = await obs.pipe(Databag.unwrap(), toArray()).toPromise();
+      const results = await lastValueFrom(obs.pipe(Databag.unwrap(), toArray()));
       expect(results).toEqual(testValues);
     });
   });
@@ -38,12 +38,12 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues);
     it('rewraps a value using the additional data from another bag', async () => {
-      const bag = await of(null).pipe(Databag.wrap()).toPromise();
+      const bag = await lastValueFrom(of(null).pipe(Databag.wrap()));
       bag.set('value', 'test');
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.rewrap(bag),
         toArray()
-      ).toPromise();
+      ));
       results.forEach(result => expect(result.get('value')).toEqual('test'));
     });
   });
@@ -52,29 +52,29 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap());
     it('executes the operator and rewraps the data', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.inside(map(val => val + 1)),
         Databag.unwrap(),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual([2, 3, 4, 5]);
     });
 
     it('executes async operators and rewraps the data', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.inside(concatMap(val => Promise.resolve(val + 1))),
         Databag.unwrap(),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual([2, 3, 4, 5]);
     });
 
     it('keeps additional data after executing the operator', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         map(val => val.set('value', 'test')),
         Databag.inside(concatMap(val => Promise.resolve(val + 1))),
         toArray()
-      ).toPromise();
+      ));
       results.forEach(result => expect(result.get('value')).toEqual('test'));
     });
   });
@@ -83,31 +83,31 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap(), Databag.set('value', 1));
     it('executes the operator and rewraps the data', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.insideWithBag(bag => map(val => val + bag.get<number>('value'))),
         Databag.unwrap(),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual([2, 3, 4, 5]);
     });
 
     it('executes async operators and rewraps the data', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.insideWithBag(bag =>
           concatMap(val => Promise.resolve(val + bag.get<number>('value')))),
         Databag.unwrap(),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual([2, 3, 4, 5]);
     });
 
     it('keeps additional data after executing the operator', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         map(val => val.set('value', 'test')),
         Databag.insideWithBag(bag =>
           concatMap(val => Promise.resolve(val + bag.get<number>('value')))),
         toArray()
-      ).toPromise();
+      ));
       results.forEach(result => expect(result.get('value')).toEqual('test'));
     });
   });
@@ -116,10 +116,10 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap());
     it('sets a property inside a bag', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.set('value', 'test'),
         toArray()
-      ).toPromise();
+      ));
       results.forEach(result => expect(result.get('value')).toEqual('test'));
     });
   });
@@ -128,10 +128,10 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap(), Databag.set('value', 'test'));
     it('sets a property inside a bag', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.setWithBag('value2', bag => `${bag.get('value')}${bag.data}`),
         toArray()
-      ).toPromise();
+      ));
       results.forEach((result, i) =>
         expect(result.get('value2')).toEqual(`test${i + 1}`));
     });
@@ -141,13 +141,13 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap());
     it('sets a property inside a bag', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.setMany({
           value: 'test',
           value2: 'test2'
         }),
         toArray()
-      ).toPromise();
+      ));
       results.forEach((result) => {
         expect(result.get('value')).toEqual('test');
         expect(result.get('value2')).toEqual('test2');
@@ -159,11 +159,11 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap());
     it('maps to a property inside a bag', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.set('value', 'test'),
         Databag.get('value'),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual(testValues.map(() => 'test'));
     });
   });
@@ -172,20 +172,20 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap(), Databag.set('value', 1));
     it('changes a property in the bag', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.modify('value', (value: number) => value - 1),
         Databag.get('value'),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual(testValues.map(() => 0));
     });
 
     it('provides the bag as a second parameter', async () => {
-      const results = await obs.pipe(
+      const results = await lastValueFrom(obs.pipe(
         Databag.modify('value', (value: number, bag) => value - bag.get<number>('value')),
         Databag.get('value'),
         toArray()
-      ).toPromise();
+      ));
       expect(results).toEqual(testValues.map(() => 0));
     });
   });
@@ -194,7 +194,7 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap());
     it('stores the main value in an additional value', async () => {
-      const results = await obs.pipe(Databag.store('test'), toArray()).toPromise();
+      const results = await lastValueFrom(obs.pipe(Databag.store('test'), toArray()));
       results.forEach(result => expect(result.get('test')).toEqual(result.data));
     });
   });
@@ -203,7 +203,7 @@ describe('Databag', () => {
     const testValues = [1, 2, 3, 4];
     const obs = from(testValues).pipe(Databag.wrap(), Databag.set('value', 'test'));
     it('stores the main value in an additional value', async () => {
-      const results = await obs.pipe(Databag.swap('value'), toArray()).toPromise();
+      const results = await lastValueFrom(obs.pipe(Databag.swap('value'), toArray()));
       results.forEach(result => expect(result).toHaveProperty('data', 'test'));
     });
   });
@@ -217,17 +217,17 @@ describe('Databag', () => {
     );
 
     it('returns the error wrapped in a databag', async () => {
-      const results = obs.toPromise();
+      const results = lastValueFrom(obs);
       await expect(results).rejects.toEqual(expect.any(Databag));
     });
 
     it('unwraps the error wrapped in a databag', async () => {
-      const results = obs.pipe(Databag.unwrap()).toPromise();
+      const results = lastValueFrom(obs.pipe(Databag.unwrap()));
       await expect(results).rejects.toThrow(/test/);
     });
 
     it('keeps the previous additional data in the error databag', async () => {
-      const results = obs.toPromise().catch(e => e.get('value'));
+      const results = lastValueFrom(obs).catch(e => e.get('value'));
       await expect(results).resolves.toEqual('test');
     });
   });

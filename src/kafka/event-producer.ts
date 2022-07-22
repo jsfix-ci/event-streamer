@@ -8,7 +8,7 @@ import { clientOptions } from './client-options';
 import { promisify } from 'util';
 import { ConfigurationManager } from './configuration-manager';
 import { defaultLogger } from '../lib/default-logger';
-import { of } from 'rxjs';
+import { lastValueFrom, of } from 'rxjs';
 import { backoff } from '@comparaonline/backoff';
 import { tap, flatMap } from 'rxjs/operators';
 
@@ -49,7 +49,7 @@ export class EventProducer extends EventEmitter {
     event._span = span;
     const { retries, delay } = this.config.retryOptions;
     const produce = promisify<ProducerFn>(this.producer.send.bind(this.producer));
-    return of(this.message(event)).pipe(
+    return lastValueFrom(of(this.message(event)).pipe(
       flatMap(msg => produce(msg)),
       backoff(retries, delay),
       tap(undefined, /* istanbul ignore next */ (error) => {
@@ -62,7 +62,7 @@ export class EventProducer extends EventEmitter {
         });
       }),
       tap(() => produceSpan.finish())
-    ).toPromise();
+    ));
   }
 
   private createSpan(event: KafkaOutputEvent, childOf?: opentracing.Span) {

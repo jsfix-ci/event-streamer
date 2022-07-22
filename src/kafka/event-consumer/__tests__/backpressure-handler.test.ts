@@ -1,4 +1,4 @@
-import { of, MonoTypeOperatorFunction, Subscription } from 'rxjs';
+import { lastValueFrom, of, MonoTypeOperatorFunction, Subscription } from 'rxjs';
 import { BackpressureHandler } from '../backpressure-handler';
 
 describe('BackpressureHandler', () => {
@@ -8,7 +8,7 @@ describe('BackpressureHandler', () => {
     jest.clearAllMocks();
   });
 
-  const testTap = (op: MonoTypeOperatorFunction<any>) => of(null).pipe(op).toPromise();
+  const testTap = (op: MonoTypeOperatorFunction<any>) => lastValueFrom(of(null).pipe(op));
   let stream: { resume: () => unknown, pause: () => unknown };
   beforeEach(() => stream = { resume: jest.fn(), pause: jest.fn() });
 
